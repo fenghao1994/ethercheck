@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<table>
+    <thead>
+    <th>
+    <td>eth地址</td>
+    <td>收到额度</td>
+    <td>登记额度</td>
+    </th>
+    </thead>
+    <tbody>
+    <tr th:each="model:${result}">
+        <td th:text="${model.address}"></td>
+        <td th:text="${model.etherScanLimit}"></td>
+        <td th:text="${model.excelLimit}"></td>
+    </tr>
+
+    </tbody>
+</table>
+</body>
+</html>
