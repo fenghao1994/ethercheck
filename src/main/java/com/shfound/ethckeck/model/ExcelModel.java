@@ -5,6 +5,7 @@ public class ExcelModel {
     private String address;
     private String limit;
     private String wxName;
+    private String isCover;// 是否重复
 
     public String getId() {
         return id;
@@ -36,5 +37,13 @@ public class ExcelModel {
 
     public void setWxName(String wxName) {
         this.wxName = wxName;
+    }
+
+    public String getIsCover() {
+        return isCover;
+    }
+
+    public void setIsCover(String isCover) {
+        this.isCover = isCover;
     }
 }

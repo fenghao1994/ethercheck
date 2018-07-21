@@ -1,11 +1,22 @@
 package com.shfound.ethckeck.model;
 
 public class Result {
+    private String id;//序号
     private String address;
     private String etherScanLimit;
     private String excelLimit;
 
     private String unFindInEther;
+    private String wxName;
+    private String cover;//是否重复
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
 
     public String getAddress() {
         return address;
@@ -37,5 +48,21 @@ public class Result {
 
     public void setUnFindInEther(String unFindInEther) {
         this.unFindInEther = unFindInEther;
+    }
+
+    public String getWxName() {
+        return wxName;
+    }
+
+    public void setWxName(String wxName) {
+        this.wxName = wxName;
+    }
+
+    public String getCover() {
+        return cover;
+    }
+
+    public void setCover(String cover) {
+        this.cover = cover;
     }
 }

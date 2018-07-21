@@ -39,7 +39,7 @@ public class ETHCheckController {
     }
 
     @RequestMapping(value = "/uploadfile", method = RequestMethod.POST)
-    public String uploadImage(@RequestParam("file") MultipartFile file, @RequestParam("ethAddress") String ethAddress, @RequestParam(value = "startTime", required = false) String startTime, @RequestParam(value = "endTime", required = false) String endTime, ModelMap modelMap) {
+    public String uploadImage(@RequestParam("file") MultipartFile file, @RequestParam("ethAddress") String ethAddress, @RequestParam(value = "startTime", required = false) String startTime, @RequestParam(value = "endTime", required = false) String endTime, @RequestParam(value = "type")String type, ModelMap modelMap) {
         try {
             SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm");
             Date startDate = simpleDateFormat.parse(startTime.replace("T", " "));
@@ -76,10 +76,15 @@ public class ETHCheckController {
                     row = sheet.getRow(i);
                     if (row != null && colnum >= 3) {
                         ExcelModel excelModel = new ExcelModel();
+                        //序号
                         excelModel.setId((String) getCellFormatValue(row.getCell(0)));
+                        //打币地址
                         excelModel.setAddress((String) getCellFormatValue(row.getCell(1)));
+                        //打币额度
                         excelModel.setLimit((String) getCellFormatValue(row.getCell(2)));
+                        //微信名字
                         excelModel.setWxName((String) getCellFormatValue(row.getCell(3)));
+                        excelModel.setIsCover("");
                         excelModels.add(excelModel);
                     } else {
                         break;
@@ -88,8 +93,8 @@ public class ETHCheckController {
                 }
             }
             filterExcelList = excelFilter(excelModels);
-            filterEthModeList = getDate(ethAddress, excelModels, startDate, endDate);
-            List<Result> check = check(filterEthModeList, filterExcelList);
+            filterEthModeList = getDate(ethAddress, excelModels, startDate, endDate, type);
+            List<Result> check = check(filterEthModeList, filterExcelList, type);
             modelMap.put("result", check);
         } catch (Exception e) {
             e.printStackTrace();
@@ -133,7 +138,7 @@ public class ETHCheckController {
         return cellValue;
     }
 
-    private List<EthModel.ResultBean> getDate(String address, List<ExcelModel> excelModelList, Date startTime, Date endTime) {
+    private List<EthModel.ResultBean> getDate(String address, List<ExcelModel> excelModelList, Date startTime, Date endTime, String type) {
         String url = "http://api.etherscan.io/api?module=account&action=txlist&address=" + address + "&startblock=0&endblock=99999999&sort=desc&apikey=" + key;
         CloseableHttpClient client = HttpClients.createDefault();
         HttpGet get = new HttpGet(url);
@@ -162,16 +167,16 @@ public class ETHCheckController {
                 e.printStackTrace();
             }
         }
-        List<EthModel.ResultBean> list = checkDate(address, ethModel, excelModelList, startTime, endTime);
+        List<EthModel.ResultBean> list = checkDate(address, ethModel, excelModelList, startTime, endTime, type);
         return list;
     }
 
-    private List<EthModel.ResultBean> checkDate(String address, EthModel ethModel, List<ExcelModel> excelModelList, Date startTime, Date endTime) {
+    private List<EthModel.ResultBean> checkDate(String address, EthModel ethModel, List<ExcelModel> excelModelList, Date startTime, Date endTime, String type) {
         if (ethModel == null || excelModelList == null || excelModelList.isEmpty()) {
             return null;
         }
         List<EthModel.ResultBean> list = spiltSomeDate(ethModel, startTime, endTime, address);
-        List<EthModel.ResultBean> filterList = ethmodelFilter(list);
+        List<EthModel.ResultBean> filterList = ethmodelFilter(list, type);
         return filterList;
 
     }
@@ -195,16 +200,22 @@ public class ETHCheckController {
     /**
      * 多笔打币记录合并
      */
-    private List<EthModel.ResultBean> ethmodelFilter(List<EthModel.ResultBean> result) {
+    private List<EthModel.ResultBean> ethmodelFilter(List<EthModel.ResultBean> result, String type) {
         List<EthModel.ResultBean> list = new ArrayList<>();
         Map<String, String> map = new HashMap<>();
         for (int i = 0; i < result.size(); i++) {
-            if (map.containsKey(result.get(i).getFrom())) {
-                String s = map.get(result.get(i).getFrom());
+            String ethAddress = "";
+            if ("1".equals(type)) {
+                ethAddress = result.get(i).getFrom();
+            } else if ("2".equals(type)) {
+                ethAddress = result.get(i).getTo();
+            }
+            if (map.containsKey(ethAddress)) {
+                String s = map.get(ethAddress);
                 double value = Double.parseDouble(s) + Double.parseDouble(result.get(i).getValue());
-                map.put(result.get(i).getFrom(), String.valueOf(value));
+                map.put(ethAddress, String.valueOf(value));
             } else {
-                map.put(result.get(i).getFrom(), result.get(i).getValue());
+                map.put(ethAddress, result.get(i).getValue());
             }
         }
         for (Map.Entry<String, String> entry : map.entrySet()) {
@@ -223,38 +234,56 @@ public class ETHCheckController {
      */
     private List<ExcelModel> excelFilter(List<ExcelModel> list) {
         List<ExcelModel> result = new ArrayList<>();
-        Map<String, ExcelModel> map = new HashMap<>();
+        Map<String, ExcelModel> map = new LinkedHashMap<>();
         if (list != null && !list.isEmpty()) {
             for (ExcelModel excelModel : list) {
                 if (map.containsKey(excelModel.getAddress())) {
                     ExcelModel excel = map.get(excelModel.getAddress());
                     double value = Double.parseDouble(excelModel.getLimit()) + Double.parseDouble(excel.getLimit());
                     excel.setLimit(String.valueOf(value));
+                    excel.setIsCover("是");
                 } else {
                     map.put(excelModel.getAddress(), excelModel);
                 }
             }
         }
+        for (ExcelModel excelModel : map.values()) {
+            result.add(excelModel);
+        }
         return result;
     }
 
-    private List<Result> check(List<EthModel.ResultBean> resultBeans, List<ExcelModel> excelModelList) {
+    private List<Result> check(List<EthModel.ResultBean> resultBeans, List<ExcelModel> excelModelList, String type) {
         List<Result> list = new ArrayList<>();
         for (int i = 0; i < excelModelList.size(); i++) {
             boolean flag = false;
             Result result = new Result();
             for (int j = 0; j < resultBeans.size(); j++) {
-                if (excelModelList.get(i).getAddress().equalsIgnoreCase(resultBeans.get(j).getFrom())) {
+                String ethAddress = "";
+                if ("1".equals(type)) {
+                    ethAddress = resultBeans.get(j).getFrom();
+                } else if ("2".equals(type)) {
+                    ethAddress = resultBeans.get(j).getTo();
+                }
+                if (excelModelList.get(i).getAddress().equalsIgnoreCase(ethAddress)) {
                     flag = true;
                     result.setAddress(excelModelList.get(i).getAddress());
                     result.setEtherScanLimit(String.valueOf(Double.parseDouble(resultBeans.get(j).getValue()) / 1000000000000000000l));
                     result.setExcelLimit(excelModelList.get(i).getLimit());
+                    result.setWxName(excelModelList.get(i).getWxName());
+                    result.setCover(excelModelList.get(i).getIsCover());
+                    result.setId(excelModelList.get(i).getId());
                     list.add(result);
                     break;
                 }
             }
             if (!flag) {
+                result.setId(excelModelList.get(i).getId());
+                result.setWxName(excelModelList.get(i).getWxName());
+                result.setExcelLimit(excelModelList.get(i).getLimit());
                 result.setUnFindInEther(excelModelList.get(i).getAddress());
+                result.setCover(excelModelList.get(i).getIsCover());
+                list.add(result);
             }
         }
         return list;

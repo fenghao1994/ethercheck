@@ -5,22 +5,27 @@
     <title>Title</title>
 </head>
 <body>
-<table>
-    <thead>
-    <th>
-    <td>eth地址</td>
-    <td>收到额度</td>
-    <td>登记额度</td>
-    </th>
-    </thead>
-    <tbody>
+<table border="1">
+
+    <tr>
+        <th>统计图上的序号<br>(重复提交的只会显示一个序号)</th>
+        <th>微信号</th>
+        <th>登记eth地址</th>
+        <th>收到额度</th>
+        <th>登记额度</th>
+        <th>链上未查到打币记录的地址</th>
+        <th>是否重复填表</th>
+    </tr>
+
     <tr th:each="model:${result}">
+        <td th:text="${model.id}"></td>
+        <td th:text="${model.wxName}"></td>
         <td th:text="${model.address}"></td>
         <td th:text="${model.etherScanLimit}"></td>
         <td th:text="${model.excelLimit}"></td>
+        <td th:text="${model.unFindInEther}"></td>
+        <td th:text="${model.cover}"></td>
     </tr>
-
-    </tbody>
 </table>
 </body>
 </html>
